@@ -1,0 +1,80 @@
+"use strict";
+
+var fs = require("fs");
+var recast = require("../haxerecast/js/recast/recast");
+var THREE = require("../armory_tools/threejs/three.tools");
+
+var path_mesh = '';
+if(process.argv.length > 2){
+    path_mesh = '.' + process.argv[2] + '.obj';
+    recast.OBJLoader(path_mesh, function() {
+        recast.buildSolo();
+
+        recast.getNavMeshVertices( recast.cb( function ( vertices ) {
+
+            var navObject = createMeshFromVertices( vertices, true );
+
+            var navMesh = mergeGeometry(navObject);
+
+            var navMeshObj = saveGeometryToObj(navMesh);
+
+            fs.writeFile(path_mesh, navMeshObj, function (err) {
+                if (err) throw err;
+            });        
+        } ));
+    });
+}
+// https://github.com/vincent/recastjs-editor/blob/master/threejs/BufferGeometryUtils.js
+function createMeshFromVertices (vertices) {
+
+    var parent = new THREE.Object3D();
+
+    var dummyMaterial = new THREE.MeshBasicMaterial();
+
+    var materials = [ dummyMaterial ];
+
+    for (var i = 0; i < vertices.length; i++) {
+        if (!vertices[i+2]) { break; }
+
+        var geometry = new THREE.ConvexGeometry([
+            new THREE.Vector3(   vertices[i].x,   vertices[i].y,   vertices[i].z ), 
+            new THREE.Vector3( vertices[i+1].x, vertices[i+1].y, vertices[i+1].z ),
+            new THREE.Vector3( vertices[i+2].x, vertices[i+2].y, vertices[i+2].z )
+        ]);
+
+        var child = THREE.SceneUtils.createMultiMaterialObject(geometry, materials);
+        parent.add(child);
+
+        i += 2;
+    }
+
+    return parent;
+}
+//https://stackoverflow.com/questions/19559395/merging-an-entire-object3d-mesh-hierarchy-together
+function mergeGeometry (obj){
+    var newGeo = new THREE.Geometry();
+    obj.traverse(function(child){
+        if(child.parent){
+            child.updateMatrixWorld();
+            child.applyMatrix(child.parent.matrixWorld);    
+        }
+        THREE.GeometryUtils.merge(newGeo, child);
+    });
+    return newGeo;
+}
+
+function saveGeometryToObj (geometry) {
+    var buffer = '';
+    
+    var verts = geometry.vertices;
+    for (var i in verts) buffer += 'v ' + (verts[i].x) + ' ' + verts[i].y + ' ' + verts[i].z + '\n';
+
+    var faces = geometry.faces;
+    for (var i in faces) {
+        buffer += 'f ' + (faces[i].a + 1) + ' ' + (faces[i].b + 1) + ' ' + (faces[i].c + 1);    
+        if (faces[i].d !== undefined) buffer += ' ' + (faces[i].d + 1);
+        buffer += '\n';
+    }
+
+    return buffer;
+}
