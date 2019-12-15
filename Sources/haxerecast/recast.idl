@@ -1,0 +1,15 @@
+interface Functions {
+    void OBJDataLoader(String data);
+	void buildSolo();
+	void set_cellSize(float val);
+	void set_cellHeight(float val);
+	void set_agentHeight(float val);
+	void set_agentRadius(float val);
+	void set_agentMaxClimb(float val);
+	void set_agentMaxSlope(float val);
+	// void buildTiled();
+	// void getRandomPoint(callback);
+	void findPath(float from_x, float from_y, float from_z, float to_x, float to_y, float to_z, float max);
+	attribute float pathLen;
+	attribute float[] pathData;
+};
